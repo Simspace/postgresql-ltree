@@ -15,6 +15,8 @@ module Database.PostgreSQL.LTree
   , parent
   , numLabels
   , mkLabel
+  , labelify
+  , nullLabel
   , unsafeMkLabel
   , uuidToLabel
   , empty
@@ -99,6 +101,23 @@ mkLabel t =
     Left $ "Invalid ltree label chars found: " <> show invalidChars
   where
   invalidChars = List.nub $ Text.unpack $ Text.filter (not . isValidLabelChar) t
+
+-- | Convert arbitrary 'Text' into a 'Label' by replacing `" -._"` with `"_"`
+-- and dropping all other invalid characters. Returns `Nothing` if there are no
+-- valid characters left.
+labelify :: Text -> Maybe Label
+labelify t
+    | Text.null t' = Nothing
+    | otherwise = Just $ Label t'
+  where
+    mapChars c
+        | Set.member c $ Set.fromList " -._" = '_'
+        | otherwise = c
+    t' = Text.filter isValidLabelChar $ Text.map mapChars t
+
+-- | A Label representing `"null"`. Useful as a backup to avoid partiality.
+nullLabel :: Label
+nullLabel = Label "null"
 
 -- | Same as 'mkLabel' except throws an error for an invalid 'Text' input.
 unsafeMkLabel :: Text -> Label
